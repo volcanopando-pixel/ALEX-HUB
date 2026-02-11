@@ -1,0 +1,740 @@
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local plotsFolder = workspace:FindFirstChild("Plots")
+
+-- ================= UI =================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "PandoGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local box = Instance.new("Frame")
+box.Size = UDim2.new(0, 200, 0, 460)
+box.Position = UDim2.new(0.5, -150, 0.5, -115) -- stays centered
+box.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+box.BorderSizePixel = 0
+box.Active = true
+box.Parent = gui
+-- ================= PAGES =================
+
+local page1 = Instance.new("Frame")
+page1.Size = UDim2.new(1,0,1,0)
+page1.BackgroundTransparency = 1
+page1.Parent = box
+
+local page2 = Instance.new("Frame")
+page2.Size = UDim2.new(1,0,1,0)
+page2.BackgroundTransparency = 1
+page2.Visible = false
+page2.Parent = box
+
+-- Rounded corners
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = box
+
+-- Outline stroke
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(60, 60, 60)
+stroke.Parent = box
+
+-- Subtle gradient background
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 60, 60))
+}
+gradient.Rotation = 45
+gradient.Parent = box
+
+-- ================= TITLE =================
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)  -- slightly taller for style
+title.Position = UDim2.new(0, 0, 0, 0) -- top of the box
+title.BackgroundTransparency = 1
+
+-- Gradient Text Effect
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 180, 255))
+}
+gradient.Rotation = 45
+gradient.Parent = title
+
+title.Text = "ALEX HUB"
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(0, 255, 0) -- fallback if gradient fails
+title.TextStrokeTransparency = 0.6
+title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+title.TextWrapped = true
+title.Parent = page1
+
+-- Optional subtitle
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, 0, 0, 8)
+subtitle.Position = UDim2.new(0, 0, 0, 36) -- right under main title
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "🟢 Working"
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextScaled = true
+subtitle.TextColor3 = Color3.fromRGB(150, 255, 150)
+subtitle.TextStrokeTransparency = 0.7
+subtitle.Parent = page1
+
+
+-- Crash Button
+local crashButton = Instance.new("TextButton")
+crashButton.Size = UDim2.new(0.9,0,0,40)
+crashButton.Position = UDim2.new(0.05,0,0,250)
+crashButton.Text = "Crash Server\n(not working/join discord)"
+crashButton.Font = Enum.Font.GothamBold
+crashButton.TextScaled = true
+crashButton.TextColor3 = Color3.new(1,1,1)
+crashButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+crashButton.BorderSizePixel = 0
+crashButton.Parent = page1
+Instance.new("UICorner", crashButton).CornerRadius = UDim.new(0,8)
+
+crashButton.MouseButton1Click:Connect(function()
+	print("Crash Server clicked (placeholder)")
+end)
+
+-- ESP TIME BUTTON (UNDER CRASHER)
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0.9,0,0,36)
+espButton.Position = UDim2.new(0.05,0,0,150)
+espButton.Text = "ESP TIME : OFF"
+espButton.Font = Enum.Font.GothamBold
+espButton.TextScaled = true
+espButton.TextColor3 = Color3.new(1,1,1)
+espButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+espButton.BorderSizePixel = 0
+espButton.Parent = page1
+Instance.new("UICorner", espButton).CornerRadius = UDim.new(0,8)
+
+-- Watermark
+local watermark = Instance.new("TextLabel")
+watermark.Size = UDim2.new(1,0,0,18)
+watermark.Position = UDim2.new(0,0,1,-18)
+watermark.BackgroundTransparency = 1
+watermark.Text = "YOU MUST JOIN DISCORD FOR TUTS"
+watermark.Font = Enum.Font.Gotham
+watermark.TextScaled = true
+watermark.TextColor3 = Color3.fromRGB(120,120,120)
+watermark.Parent = box
+
+-- ================= ESP LOGIC =================
+
+local baseEspInstances = {}
+local espConnection = nil
+local espEnabled = false
+
+local function createBaseESP(plot, mainPart)
+	if baseEspInstances[plot] then
+		baseEspInstances[plot]:Destroy()
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Size = UDim2.new(0,80,0,30)
+	billboard.StudsOffset = Vector3.new(0,5,0)
+	billboard.AlwaysOnTop = true
+	billboard.Adornee = mainPart
+	billboard.MaxDistance = 1000
+	billboard.Parent = plot
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1,0,1,0)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.Font = Enum.Font.Arcade
+	label.TextColor3 = Color3.fromRGB(0,180,255)
+	label.TextStrokeTransparency = 0
+	label.TextStrokeColor3 = Color3.new(0,0,0)
+	label.Parent = billboard
+
+	baseEspInstances[plot] = billboard
+	return billboard
+end
+
+local function clearESP()
+	for _, gui in pairs(baseEspInstances) do
+		gui:Destroy()
+	end
+	baseEspInstances = {}
+end
+
+local function updateESP()
+	if not plotsFolder then return end
+
+	for _, plot in ipairs(plotsFolder:GetChildren()) do
+		local purchases = plot:FindFirstChild("Purchases")
+		local plotBlock = purchases and purchases:FindFirstChild("PlotBlock")
+		local mainPart = plotBlock and plotBlock:FindFirstChild("Main")
+
+		if mainPart then
+			local timeLabel = mainPart:FindFirstChild("BillboardGui")
+				and mainPart.BillboardGui:FindFirstChild("RemainingTime")
+
+			if timeLabel then
+				local billboard = baseEspInstances[plot] or createBaseESP(plot, mainPart)
+				local label = billboard:FindFirstChildWhichIsA("TextLabel")
+				if label then
+					label.Text = timeLabel.Text
+				end
+			end
+		end
+	end
+end
+
+-- ================= TOGGLE =================
+
+espButton.MouseButton1Click:Connect(function()
+	espEnabled = not espEnabled
+
+	if espEnabled then
+		espButton.Text = "ESP TIME : ON"
+		espButton.BackgroundColor3 = Color3.fromRGB(80,180,80)
+		espConnection = RunService.RenderStepped:Connect(updateESP)
+	else
+		espButton.Text = "ESP TIME : OFF"
+		espButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+		if espConnection then
+			espConnection:Disconnect()
+			espConnection = nil
+		end
+		clearESP()
+	end
+end)
+
+-- ================= DRAG =================
+
+local dragging, dragStart, startPos
+box.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = box.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		box.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+-- ===== SPEED BUTTON (WHEN STEAL) =====
+
+local speedBoost = 30
+local speedEnabled = false
+local speedConnection = nil
+
+-- FUNCTIONS
+local function enableSpeedBoost()
+    if speedConnection then speedConnection:Disconnect() end
+
+    speedConnection = RunService.Stepped:Connect(function()
+        if not speedEnabled then return end
+
+        local character = player.Character
+        if not character then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        if humanoid:GetState() == Enum.HumanoidStateType.Running then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                local moveDir = humanoid.MoveDirection
+                if moveDir.Magnitude > 0 then
+                    rootPart.Velocity = Vector3.new(
+                        moveDir.X * speedBoost,
+                        rootPart.Velocity.Y,
+                        moveDir.Z * speedBoost
+                    )
+                end
+            end
+        end
+    end)
+end
+
+local function disableSpeedBoost()
+    if speedConnection then
+        speedConnection:Disconnect()
+        speedConnection = nil
+    end
+end
+
+-- SPEED BUTTON (STYLED)
+local speedButton = Instance.new("TextButton")
+speedButton.Size = UDim2.new(0.9,0,0,36)      -- same width as other buttons
+speedButton.Position = UDim2.new(0.05,0,0,100) -- adjust Y under Discord
+speedButton.Text = "SPEED BOOST\n(When Steal)"        -- fixed name
+speedButton.Font = Enum.Font.GothamBold
+speedButton.TextScaled = true
+speedButton.TextColor3 = Color3.fromRGB(255,255,255)
+speedButton.BackgroundColor3 = Color3.fromRGB(120,120,120) -- same as Discord button
+speedButton.BorderSizePixel = 0
+speedButton.Parent = box
+Instance.new("UICorner", speedButton).CornerRadius = UDim.new(0,8)
+
+-- BUTTON LOGIC (COLOR INDICATES ON/OFF)
+speedButton.MouseButton1Click:Connect(function()
+    speedEnabled = not speedEnabled
+
+    if speedEnabled then
+        speedButton.BackgroundColor3 = Color3.fromRGB(60,200,60) -- green = ON
+        enableSpeedBoost()
+    else
+        speedButton.BackgroundColor3 = Color3.fromRGB(120,120,120) -- theme color = OFF
+        disableSpeedBoost()
+    end
+end)
+
+-- REAPPLY ON CHARACTER SPAWN
+player.CharacterAdded:Connect(function()
+    if speedEnabled then
+        task.wait(0.5)
+        enableSpeedBoost()
+    end
+end)
+-- DISCORD BUTTON
+local discordButton = Instance.new("TextButton")
+discordButton.Size = UDim2.new(0.9, 0, 0, 36)
+discordButton.Position = UDim2.new(0.05, 0, 0, 400) -- under ESP button
+discordButton.Text = "Discord"
+discordButton.Font = Enum.Font.GothamBold
+discordButton.TextScaled = true
+discordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+discordButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+discordButton.BorderSizePixel = 0
+discordButton.Parent = box
+Instance.new("UICorner", discordButton).CornerRadius = UDim.new(0, 8)
+
+local DISCORD_LINK = "https://discord.gg/pMHuX4xn8N"
+
+discordButton.MouseButton1Click:Connect(function()
+	pcall(function()
+		setclipboard(DISCORD_LINK) -- copy link to clipboard
+	end)
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = "Discord",
+			Text = "Discord link copied!",
+			Duration = 3
+		})
+	end)
+end)
+-- Ultimate Defend Button
+local ultimateButton = Instance.new("TextButton")
+ultimateButton.Size = UDim2.new(0.9, 0, 0, 40)
+ultimateButton.Position = UDim2.new(0.05, 0, 0, 50) -- under Crash Server (Crash Y=50, button height=40 + 10 spacing)
+ultimateButton.Text = "AP SPAMMER\n(LEGAL(must own chat))"
+ultimateButton.Font = Enum.Font.GothamBold
+ultimateButton.TextScaled = true
+ultimateButton.TextColor3 = Color3.new(1,1,1)
+ultimateButton.BackgroundColor3 = Color3.fromRGB(120,120,120) -- same as Crash Server
+ultimateButton.BorderSizePixel = 0
+ultimateButton.Parent = box
+Instance.new("UICorner", ultimateButton).CornerRadius = UDim.new(0,8)
+
+-- Ultimate Defend Logic
+ultimateButton.MouseButton1Click:Connect(function()
+	local TextChatService = game:GetService("TextChatService")
+	local Players = game:GetService("Players")
+	local player = Players.LocalPlayer
+
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			local commands = {"balloon", "ragdoll", "jail", "rocket", "jumpscare", "tiny", "morph", }
+			for _, cmd in ipairs(commands) do
+				local channel = TextChatService.ChatInputBarConfiguration.TargetTextChannel
+				if channel then
+					channel:SendAsync(";"..cmd.." "..plr.Name)
+				end
+			end
+		end
+	end
+end)
+-- ================= PLAYER ESP AUTO =================
+local espPlayerConnections = {}
+local function createPlayerESP(plr)
+	if plr == player then return end
+	if not plr.Character then return end
+	if plr.Character:FindFirstChild("ESP_Hitbox") then return end
+
+	local char = plr.Character
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	local head = char:FindFirstChild("Head")
+	if not (hrp and head) then return end
+
+	-- Hitbox
+	local hitbox = Instance.new("BoxHandleAdornment")
+	hitbox.Name = "ESP_Hitbox"
+	hitbox.Adornee = hrp
+	hitbox.Size = Vector3.new(4,6,2)
+	hitbox.Color3 = Color3.fromRGB(255,0,0)
+	hitbox.Transparency = 0.6
+	hitbox.AlwaysOnTop = true
+	hitbox.ZIndex = 10
+	hitbox.Parent = char
+
+	-- Name Label
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "ESP_Name"
+	billboard.Adornee = head
+	billboard.Size = UDim2.new(0,200,0,50)
+	billboard.StudsOffset = Vector3.new(0,3,0)
+	billboard.AlwaysOnTop = true
+	billboard.Parent = char
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1,0,1,0)
+	label.BackgroundTransparency = 1
+	label.Text = plr.Name
+	label.TextColor3 = Color3.fromRGB(255,0,0)
+	label.Font = Enum.Font.Arcade
+    label.TextScaled = false
+label.TextSize = 12 -- sets font size to 12 pixels
+
+	label.TextStrokeTransparency = 0.7
+	label.TextStrokeColor3 = Color3.new(0,0,0)
+	label.Parent = billboard
+end
+
+local function removePlayerESP(plr)
+	if not plr.Character then return end
+	local hitbox = plr.Character:FindFirstChild("ESP_Hitbox")
+	local nameGui = plr.Character:FindFirstChild("ESP_Name")
+	if hitbox then hitbox:Destroy() end
+	if nameGui then nameGui:Destroy() end
+end
+
+local function enablePlayerESP()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			createPlayerESP(plr)
+
+			-- Recreate ESP on respawn
+			local conn = plr.CharacterAdded:Connect(function()
+				task.wait(0.1)
+				createPlayerESP(plr)
+			end)
+			table.insert(espPlayerConnections, conn)
+		end
+	end
+
+	-- Auto add ESP for new players
+	local playerAddedConn = Players.PlayerAdded:Connect(function(plr)
+		if plr == player then return end
+		local charAddedConn = plr.CharacterAdded:Connect(function()
+			task.wait(0.1)
+			createPlayerESP(plr)
+		end)
+		table.insert(espPlayerConnections, charAddedConn)
+	end)
+	table.insert(espPlayerConnections, playerAddedConn)
+end
+
+-- Auto-enable player ESP immediately
+enablePlayerESP()
+-- ANTI RAGDOLL BUTTON GUI
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Player = Players.LocalPlayer
+local PlayerModule = require(Player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+local Controls = PlayerModule:GetControls()
+
+local ENABLE_ANTI_RAGDOLL = false
+local ENABLE_ANTI_ITEM = false
+local Frozen = false
+local DisabledRemotes = {}
+local RemoteWatcher
+local BlockedStates = {
+    [Enum.HumanoidStateType.Ragdoll] = true,
+    [Enum.HumanoidStateType.FallingDown] = true,
+    [Enum.HumanoidStateType.Physics] = true,
+    [Enum.HumanoidStateType.Dead] = true
+}
+local RemoteKeywords = { "useitem", "combatservice", "ragdoll" }
+
+-- FUNCTIONS
+local function ForceNormal(character)
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+    hum.Health = hum.MaxHealth
+    hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+    if not Frozen then
+        Frozen = true
+        hrp.Anchored = true
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        hrp.CFrame += Vector3.new(0, 1.5, 0)
+    end
+end
+
+local function Release(character)
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if hrp and Frozen then
+        hrp.Anchored = false
+        Frozen = false
+    end
+end
+
+local function RestoreMotors(character)
+    for _, v in ipairs(character:GetDescendants()) do
+        if v:IsA("Motor6D") then
+            v.Enabled = true
+        elseif v:IsA("Constraint") then
+            v.Enabled = false
+        end
+    end
+end
+
+local function InitAntiRagdoll(character)
+    local hum = character:WaitForChild("Humanoid", 10)
+    if not hum then return end
+    for state in pairs(BlockedStates) do
+        hum:SetStateEnabled(state, false)
+    end
+    hum.StateChanged:Connect(function(_, new)
+        if ENABLE_ANTI_RAGDOLL and BlockedStates[new] then
+            ForceNormal(character)
+            RestoreMotors(character)
+        end
+    end)
+    RunService.Stepped:Connect(function()
+        if not ENABLE_ANTI_RAGDOLL then
+            Release(character)
+            return
+        end
+        if BlockedStates[hum:GetState()] then
+            ForceNormal(character)
+        else
+            Release(character)
+        end
+        hum.Health = hum.MaxHealth
+    end)
+end
+
+local function KillRemote(remote)
+    if not getconnections or not remote:IsA("RemoteEvent") then return end
+    if DisabledRemotes[remote] then return end
+    local name = remote.Name:lower()
+    for _, key in ipairs(RemoteKeywords) do
+        if name:find(key) then
+            DisabledRemotes[remote] = {}
+            for _, c in ipairs(getconnections(remote.OnClientEvent)) do
+                if c.Disable then
+                    c:Disable()
+                    table.insert(DisabledRemotes[remote], c)
+                end
+            end
+            break
+        end
+    end
+end
+
+local function InitAntiItem()
+    Controls:Enable()
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        KillRemote(obj)
+    end
+    RemoteWatcher = ReplicatedStorage.DescendantAdded:Connect(KillRemote)
+end
+
+-- CHARACTER SPAWN
+Player.CharacterAdded:Connect(function(char)
+    task.wait(0.4)
+    if ENABLE_ANTI_RAGDOLL then
+        InitAntiRagdoll(char)
+    end
+end)
+if Player.Character then
+    InitAntiRagdoll(Player.Character)
+end
+if ENABLE_ANTI_ITEM then
+    task.delay(0.25, InitAntiItem)
+end
+
+-- ================= GUI BUTTON =================
+-- add this inside your existing GUI frame (replace "box" with your frame variable)
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.9,0,0,36)
+button.Position = UDim2.new(0.05,0,0,200) -- adjust Y position
+button.Text = "Anti Ragdoll: OFF\n (need 7 seconds to work!)"
+button.Font = Enum.Font.GothamBold
+button.TextScaled = true
+button.TextColor3 = Color3.new(1,1,1)
+button.BackgroundColor3 = Color3.fromRGB(120,120,120)
+button.BorderSizePixel = 0
+button.Parent = box
+Instance.new("UICorner", button).CornerRadius = UDim.new(0,8)
+
+button.MouseButton1Click:Connect(function()
+    ENABLE_ANTI_RAGDOLL = not ENABLE_ANTI_RAGDOLL
+    ENABLE_ANTI_ITEM = ENABLE_ANTI_RAGDOLL
+    if ENABLE_ANTI_RAGDOLL then
+        button.Text = "Anti Ragdoll: ON"
+        button.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+        if Player.Character then
+            InitAntiRagdoll(Player.Character)
+        end
+        InitAntiItem()
+    else
+        button.Text = "Anti Ragdoll: OFF"
+        button.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+        Release(Player.Character)
+        if RemoteWatcher then
+            RemoteWatcher:Disconnect()
+            RemoteWatcher = nil
+        end
+    end
+end)
+-- ================= TP TO BASE 1=================
+local moveButton = Instance.new("TextButton")
+moveButton.Size = UDim2.new(0.9,0,0,36)
+moveButton.Position = UDim2.new(0.05,0,0,300)
+moveButton.Text = "TP TO BASE 1\n(if u join first) : OFF"
+moveButton.Font = Enum.Font.GothamBold
+moveButton.TextScaled = true
+moveButton.TextColor3 = Color3.new(1,1,1)
+moveButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+moveButton.BorderSizePixel = 0
+moveButton.Parent = box
+Instance.new("UICorner", moveButton).CornerRadius = UDim.new(0,8)
+
+local moving = false
+local moveConnection
+local target = Vector3.new(-345.3, 8.45, 115.88)
+local desiredSpeed = 29.5
+
+moveButton.MouseButton1Click:Connect(function()
+	moving = not moving
+	local character = player.Character
+	if not character then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root then return end
+
+	if moving then
+		moveButton.Text = "TELEPORTING : ON"
+		moveButton.BackgroundColor3 = Color3.fromRGB(80,180,80)
+
+		moveConnection = RunService.RenderStepped:Connect(function()
+			-- Force speed every frame
+			humanoid.WalkSpeed = desiredSpeed
+
+			local direction = (target - root.Position)
+			local distance = direction.Magnitude
+
+			if distance < 3 then
+				humanoid:Move(Vector3.zero, false)
+				moving = false
+				moveButton.Text = "TP TO BASE 1\n(if u join first) : OFF"
+				moveButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+				moveConnection:Disconnect()
+				return
+			end
+
+			humanoid:Move(direction.Unit, false)
+		end)
+
+	else
+		moveButton.Text = "TP TO BASE 1\n(if u join first) : OFF"
+		moveButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+
+		if moveConnection then
+			moveConnection:Disconnect()
+		end
+
+		if humanoid then
+			humanoid:Move(Vector3.zero, false)
+			humanoid.WalkSpeed = 16 -- reset default speed when off
+		end
+	end
+end)
+-- =================TP TO BASE 2 =================
+local moveButton = Instance.new("TextButton")
+moveButton.Size = UDim2.new(0.9,0,0,36)
+moveButton.Position = UDim2.new(0.05,0,0,350)
+moveButton.Text = "TP TO BASE 2\n(if u join second) : OFF"
+moveButton.Font = Enum.Font.GothamBold
+moveButton.TextScaled = true
+moveButton.TextColor3 = Color3.new(1,1,1)
+moveButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+moveButton.BorderSizePixel = 0
+moveButton.Parent = box
+Instance.new("UICorner", moveButton).CornerRadius = UDim.new(0,8)
+
+local moving = false
+local moveConnection
+local target = Vector3.new(-347, -6.54, 6.52)
+local desiredSpeed = 29.5
+
+moveButton.MouseButton1Click:Connect(function()
+	moving = not moving
+	local character = player.Character
+	if not character then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root then return end
+
+	if moving then
+		moveButton.Text = "TELEPORTING : ON"
+		moveButton.BackgroundColor3 = Color3.fromRGB(80,180,80)
+
+		moveConnection = RunService.RenderStepped:Connect(function()
+			-- Force speed every frame
+			humanoid.WalkSpeed = desiredSpeed
+
+			local direction = (target - root.Position)
+			local distance = direction.Magnitude
+
+			if distance < 3 then
+				humanoid:Move(Vector3.zero, false)
+				moving = false
+				moveButton.Text = "TP TO BASE 2\n(if u join second) : OFF"
+				moveButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+				moveConnection:Disconnect()
+				return
+			end
+
+			humanoid:Move(direction.Unit, false)
+		end)
+
+	else
+		moveButton.Text = "TP TO BASE 2\n(if u join second) : OFF"
+		moveButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+
+		if moveConnection then
+			moveConnection:Disconnect()
+		end
+
+		if humanoid then
+			humanoid:Move(Vector3.zero, false)
+			humanoid.WalkSpeed = 16 -- reset default speed when off
+		end
+	end
+end)
