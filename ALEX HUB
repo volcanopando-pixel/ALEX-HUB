@@ -1,4 +1,4 @@
-local SCRIPT_ENABLED = false
+local SCRIPT_ENABLED = true
 
 if not SCRIPT_ENABLED then
     warn("This script is currently disabled.")
