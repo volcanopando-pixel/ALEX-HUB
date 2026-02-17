@@ -1,9 +1,3 @@
-local SCRIPT_ENABLED = false
-
-if not SCRIPT_ENABLED then
-    warn("This script is currently disabled.")
-    return
-end
 --[[
  .____                  ________ ___.    _____                           __                
  |    |    __ _______   \_____  \\_ |___/ ____\_ __  ______ ____ _____ _/  |_  ___________ 
